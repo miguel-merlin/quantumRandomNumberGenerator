@@ -33,3 +33,40 @@ def bit_from_counts(counts):
 
 def num_bits(n):
     return math.floor(math.log(n,2)) + 1
+
+def get_register_sizes(n, max_quibits):
+    register_sizes = [max_quibits for i in range(int(n/max_quibits))]
+    remainder = n % max_quibits
+    return register_sizes if remainder == 0 else register_sizes + [remainder]
+
+def random_int(max, remote = False):
+    bits = ''
+    n_bits = num_bits(max-1)
+    register_sizes = get_register_sizes(n_bits, max_quibits)
+    backend = "ibmqx4" if remote else "local_qasm_simulator"
+
+    for x in register_sizes:
+        q = QuantumRegister(x)
+        c = ClassicalRegister(x)
+        qc = QuantumCircuit(x)
+
+        qc.h(q)
+        qc.measure(q,c)
+
+        job_sim = execute(qc, backend, shots=1)
+        sim_result = job_sim.result()
+        counts = sim_result.get_counts(qc)
+
+
+        bits += bit_from_counts(counts)
+
+    return int(bits,2)
+
+input = parse_input()
+
+if input.remote:
+    register(input.qx_token, qx_url)
+
+result = random_int(input.max, input.remote)
+
+print(result)
