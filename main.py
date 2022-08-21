@@ -1,71 +1,73 @@
+import os
 import math, argparse, warnings
 from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister, execute, register
+from dotenv import load_dotenv
 
-warning.filterwarnings("ignore")
+warnings.filterwarnings("ignore")
 
-max_quibits = 5
-qx_url = "https://quantumexperience.ng.bluemix.net/d583c3f3cbf714354b85a93916cfc406bec15ee4b304b62d677db60910305c628d1f13f0d28b7d51bedc4fe522062d3b66a45a630e4a40fed64c75211cf6e439"
+load_dotenv()
+
+QX_KEY = os.getenv('QX_URL')
+
+MAX_QUBITS = 5
+QX_URL = QX_KEY
 
 def parse_input():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('max', metavar='n', type=int, nargs='?', default=16, help='a maximum integer to generate')
-    parser.add_argument('--remote', action='store_true', default=False, help='run command on real remote quantum processor')
-    parser.add_argument('--qx-token', nargs='?', help='api token for IBM Q Experience remote backend')
-    args = parser.parse_args()
+  parser = argparse.ArgumentParser()
+  parser.add_argument('max', metavar='n', type=int, nargs='?', default=16, help='a maximum integer to generate')
+  parser.add_argument('--remote', action='store_true', default=False, help='run command on real remote quantum processor')
+  parser.add_argument('--qx-token', nargs='?', help='api token for IBM Q Experience remote backend')
+  args = parser.parse_args()
 
-    if args.remote and args.qx_token is None:
-        parser.error("--remote requires --qx token")
+  if args.remote and args.qx_token is None:
+    parser.error("--remote requires --qx-token")
 
-    next_power = next_power_of_2(args.max)
-    if (next_power > args.max):
-        print(f"Rounding input {args.max} to the next power of two: {next_power}")
-        args.max = next_power
+  next_power = next_power_of_2(args.max)
+  if (next_power > args.max):
+    print(f"Rounding input {args.max} to next power of 2: {next_power}")
+    args.max = next_power
 
-
-    return args
-
+  return args
 
 def next_power_of_2(n):
-    return int(math.pow(2,math.ceil(math.log(n,2))))
+  return int(math.pow(2, math.ceil(math.log(n, 2))))
 
 def bit_from_counts(counts):
     return [k for k, v in counts.items() if v == 1][0]
 
 def num_bits(n):
-    return math.floor(math.log(n,2)) + 1
+  return math.floor(math.log(n, 2)) + 1
 
-def get_register_sizes(n, max_quibits):
-    register_sizes = [max_quibits for i in range(int(n/max_quibits))]
-    remainder = n % max_quibits
-    return register_sizes if remainder == 0 else register_sizes + [remainder]
+def get_register_sizes(n, max_qubits):
+  register_sizes = [max_qubits for i in range(int(n / max_qubits))]
+  remainder = n % max_qubits
+  return register_sizes if remainder == 0 else register_sizes + [remainder]
 
-def random_int(max, remote = False):
-    bits = ''
-    n_bits = num_bits(max-1)
-    register_sizes = get_register_sizes(n_bits, max_quibits)
-    backend = "ibmqx4" if remote else "local_qasm_simulator"
+def random_int(max, remote=False):
+  bits = ''
+  n_bits = num_bits(max - 1)
+  register_sizes = get_register_sizes(n_bits, MAX_QUBITS)
+  backend = "ibmqx4" if remote else "local_qasm_simulator"
 
-    for x in register_sizes:
-        q = QuantumRegister(x)
-        c = ClassicalRegister(x)
-        qc = QuantumCircuit(x)
+  for x in register_sizes:
+    q = QuantumRegister(x)
+    c = ClassicalRegister(x)
+    qc = QuantumCircuit(q, c)
 
-        qc.h(q)
-        qc.measure(q,c)
+    qc.h(q)
+    qc.measure(q, c)
 
-        job_sim = execute(qc, backend, shots=1)
-        sim_result = job_sim.result()
-        counts = sim_result.get_counts(qc)
+    job_sim = execute(qc, backend, shots=1)
+    sim_result = job_sim.result()
+    counts = sim_result.get_counts(qc)
 
-
-        bits += bit_from_counts(counts)
-
-    return int(bits,2)
+    bits += bit_from_counts(counts)
+  return int(bits, 2)
 
 input = parse_input()
 
 if input.remote:
-    register(input.qx_token, qx_url)
+  register(input.qx_token, QX_URL)
 
 result = random_int(input.max, input.remote)
 

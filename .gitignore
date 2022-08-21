@@ -1,0 +1,5 @@
+#Do not upload venv folder
+tutorial-env/
+
+#Dot not upload .env filesz
+*.env
